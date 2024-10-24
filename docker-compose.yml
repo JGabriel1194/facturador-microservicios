@@ -1,0 +1,94 @@
+services:
+  # Servicio de clientes
+  clients:
+    build:
+      context: ./services/clients
+    container_name: clients_service
+    ports:
+      - "3001:3001"
+    networks:
+      - app-network
+    environment:
+      - MONGO_URI=mongodb://clients-db:27017/clients
+    depends_on:
+      - clients-db
+
+  # Base de datos para el servicio de clientes
+  clients-db:
+    image: mongo:8.0.0
+    container_name: clients_db
+    networks:
+      - app-network
+    volumes:
+      - clients-data:/data/db
+    ports:
+      - "27017:27017"
+
+  # Servicio de productos
+  products:
+    build:
+      context: ./services/products
+    container_name: products_service
+    ports:
+      - "3002:3002"
+    networks:
+      - app-network
+    environment:
+      - MONGO_URI=mongodb://products-db:27017/products
+    depends_on:
+      - products-db
+
+  # Base de datos para el servicio de productos
+  products-db:
+    image: mongo:8.0.0
+    container_name: products_db
+    networks:
+      - app-network
+    volumes:
+      - products-data:/data/db
+    ports:
+      - "27018:27017"
+
+  # Servicio de facturación (billing)
+  billing:
+    build:
+      context: ./services/billing
+    container_name: billing_service
+    ports:
+      - "3003:3003"
+    networks:
+      - app-network
+    environment:
+      - MONGO_URI=mongodb://billing-db:27017/billing
+    depends_on:
+      - billing-db
+
+  # Base de datos para el servicio de facturación
+  billing-db:
+    image: mongo:8.0.0
+    container_name: billing_db
+    networks:
+      - app-network
+    volumes:
+      - billing-data:/data/db
+    ports:
+      - "27019:27017"
+
+  # # Frontend
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  #   container_name: frontend_service
+  #   ports:
+  #     - "3000:3000"
+  #   networks:
+  #     - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  clients-data:
+  products-data:
+  billing-data:

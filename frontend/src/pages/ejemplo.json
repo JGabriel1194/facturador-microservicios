@@ -1,0 +1,49 @@
+{
+  "infoTributaria": {
+    "ambiente": 0,
+    "tipoEmision": 1,
+    "razonSocial": "Mi Empresa S.A.",
+    "nombreComercial": "Mi Empresa",
+    "ruc": "1234567890",
+    "claveAcceso": "",
+    "codDoc": "01",
+    "estab": "001",
+    "ptoEmi": "",
+    "secuencial": "",
+    "dirMatriz": "Calle Falsa 123"
+  },
+  "infoFactura": {
+    "fechaEmision": "2024-10-14T02:03:27.350Z",
+    "dirEstablecimiento": "El Ángel, Av. 10 de Agosto y Av. 6 de Diciembre",
+    "obligadoContabilidad": "Si",
+    "tipoIdentificacionComprador": "05",
+    "razonSocialComprador": "Gabriel Soto",
+    "identificacionComprador": "0401862388",
+    "direccionComprador": "El Ángel, Av. 10 de Agosto",
+    "totalSinImpuestos": 0,
+    "totalDescuento": 0,
+    "totalConImpuestos": {
+      "totalImpuesto": [
+        { "codigo": 1, "codigoPorcentaje": 2, "baseImponible": 0, "valor": 0 }
+      ]
+    },
+    "propina": 0,
+    "importeTotal": 0,
+    "pagos": {
+      "pago": [
+        { "formaPago": "asd", "total": 5, "plazo": 33, "unidadTiempo": "33" }
+      ]
+    }
+  },
+  "detalles": { "detalle": [] },
+  "infoAdicional": {
+    "campoAdicional": [
+      { "_attributes": { "nombre": "Teléfono" }, "_text": "0998463093" },
+      { "_attributes": { "nombre": "Email" }, "_text": "juanga_esp@outlook.es" }
+    ]
+  },
+  "status": "",
+  "_id": "",
+  "xmlGenerated": "",
+  "xmlSigned": ""
+}
