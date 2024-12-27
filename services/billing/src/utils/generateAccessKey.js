@@ -14,8 +14,9 @@ export const generateAccessKey = (invoiceData) => {
   const ptoEmi = invoiceData.infoTributaria.ptoEmi.padStart(3, "0"); //
   const secuencial = invoiceData.infoTributaria.secuencial.padStart(9, "0"); // Ejemplo: 000000001
   const randomNumber = generateRandomEightDigitNumber(); // Número aleatorio de 8 dígitos 
+  console.log('randomNumber', randomNumber)
   const tipoEmision = invoiceData.infoTributaria.tipoEmision; //
-
+  
   let claveAcceso = `${fecha}${tipoComprobante}${ruc}${ambiente}${estab}${ptoEmi}${secuencial}${randomNumber}${tipoEmision}`; // Agregar campos que correspondan
 
   // Calcular el dígito verificador

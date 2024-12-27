@@ -1,4 +1,4 @@
-export interface BillingType {
+export interface Billing {
   infoTributaria: {
     ambiente: number;
     tipoEmision: number;
@@ -69,8 +69,4 @@ export interface BillingType {
       _text: string;
     }[];
   };
-  status: string;
-  _id: string;
-  xmlGenerated: string;
-  xmlSigned: string;
 }

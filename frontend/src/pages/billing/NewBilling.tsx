@@ -1,41 +1,45 @@
 import React, { useEffect, useState } from "react";
-import { BillingType } from "../../types/BillingType";
+import { Billing } from "../../types/BillingType";
 import { TextInput, Button, Table, Label, Select, Modal } from "flowbite-react";
 import { Product } from "../../types/ProductType";
 import useProducts from "../../hooks/useProducts";
 import { PagoType } from "../../types/PagoType";
 import PagoModal from "../../components/PagoModal";
+import useBillings from "../../hooks/useBillins";
+import { Invoice } from "../../types/InvoiceType";
+import LoadModal from "../../components/LoadModal";
+import SignedModal from "../../components/SignedModal";
 
 const NewBilling: React.FC = () => {
-  const [formData, setFormData] = useState<BillingType>({
+  const [formData, setFormData] = useState<Billing>({
     infoTributaria: {
-      ambiente: 0,
+      ambiente: 1,
       tipoEmision: 1,
       razonSocial: "Mi Empresa S.A.",
       nombreComercial: "Mi Empresa",
-      ruc: "1234567890",
+      ruc: "0401862388001",
       claveAcceso: "",
       codDoc: "01",
       estab: "001",
-      ptoEmi: "",
+      ptoEmi: "001",
       secuencial: "",
       dirMatriz: "Calle Falsa 123",
     },
     infoFactura: {
       fechaEmision: new Date().toISOString(),
       dirEstablecimiento: "El Ángel, Av. 10 de Agosto y Av. 6 de Diciembre",
-      obligadoContabilidad: "Si",
+      obligadoContabilidad: "SI",
       tipoIdentificacionComprador: "05",
-      razonSocialComprador: "Gabriel Soto",
-      identificacionComprador: "0401862388",
+      razonSocialComprador: "Vivian Soto",
+      identificacionComprador: "0401862370",
       direccionComprador: "El Ángel, Av. 10 de Agosto",
       totalSinImpuestos: 0,
       totalDescuento: 0,
       totalConImpuestos: {
         totalImpuesto: [
           {
-            codigo: 1,
-            codigoPorcentaje: 2,
+            codigo: 2,
+            codigoPorcentaje: 4,
             baseImponible: 0,
             valor: 0,
           },
@@ -69,11 +73,10 @@ const NewBilling: React.FC = () => {
         },
       ],
     },
-    status: "",
-    _id: "",
-    xmlGenerated: "",
-    xmlSigned: "",
   });
+  const [invoiceData, setInvoiceData] = useState<Invoice>();  
+
+  const {saveBilling,signInvoice, loading, error} = useBillings(1,2,'');
 
   type FormSections =
     | "infoTributaria"
@@ -90,7 +93,8 @@ const NewBilling: React.FC = () => {
     plazo: 0,
     unidadTiempo: "",
   });
-  const { products, loading, error } = useProducts(1, 10, searchTerm);
+  const { products} = useProducts(1, 10, searchTerm);
+  const [showSingModal, setShowSingModal] = useState(false);
 
   useEffect(() => {
     if (searchTerm) {
@@ -100,6 +104,78 @@ const NewBilling: React.FC = () => {
     }
   }, [searchTerm, products]);
 
+  useEffect(() => {
+    // Cargar datos desde localStorage cuando el componente se monte
+    const savedData = localStorage.getItem("formData");
+    if (savedData) {
+      setFormData(JSON.parse(savedData));
+    }
+  }, []);
+
+  useEffect(() => {
+    calcularTotales();
+  },[formData.detalles.detalle]);
+
+  useEffect(() => {
+      if (invoiceData?.invoice) {
+        setFormData(invoiceData.invoice);
+      }
+    }, [invoiceData]);
+
+  // Función para calcular los totales de la factura
+  const calcularTotales = () => {
+    let totalSinImpuestos = 0;
+    let totalDescuento = 0;
+    let totalIVA15 = 0;
+    let totalIVA5 = 0;
+    let totalTarifaEspecial = 0;
+
+    formData.detalles.detalle.forEach((detalle) => {
+
+      console.log(detalle.impuestos.impuesto.tarifa);
+      totalSinImpuestos += detalle.cantidad * detalle.precioUnitario;
+      totalDescuento += detalle.descuento;
+
+      const tarifa = detalle.impuestos.impuesto.tarifa;
+      const valor = detalle.impuestos.impuesto.valor;
+
+      if (tarifa === 15) {
+        totalIVA15 += valor;
+      } else if (tarifa === 5) {
+        totalIVA5 += valor;
+      } else if (tarifa === 10) {
+        totalTarifaEspecial += valor;
+      }
+
+      console.log(valor,"->");
+    });
+
+    
+    const valorAPagar = totalSinImpuestos + totalIVA15 + totalIVA5 + totalTarifaEspecial - totalDescuento;
+
+    setFormData((prevFormData) => ({
+      ...prevFormData,
+      infoFactura: {
+        ...prevFormData.infoFactura,
+        totalSinImpuestos,
+        totalDescuento,
+        totalConImpuestos: {
+          totalImpuesto: [
+            {
+              codigo: 2,
+              codigoPorcentaje: 4,
+              baseImponible: totalSinImpuestos,
+              valor: totalIVA15,
+            },
+          ],
+        },
+        importeTotal: parseFloat(valorAPagar.toFixed(3)), //parseFloat((product.price * (product.tax / 100)).toFixed(2)),
+      },
+    }));
+    
+  }
+
+  // Función para manejar los cambios en los campos del formulario
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
     section: FormSections,
@@ -145,10 +221,35 @@ const NewBilling: React.FC = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log(formData);
+  // Función para manejar el envío del formulario
+  const handleSubmit = async () => {
+    const data = await saveBilling(formData);
+    console.log('factura',data);
+    setInvoiceData(data.data);
   };
+
+  //Abrir modal de firma
+  const handleShowSingModal = () => {
+    setShowSingModal(true);
+  }
+
+  //Cerrar modal de firma
+  const handleCloseSingModal = () => {
+    setShowSingModal(false);
+  }
+
+  // Función para firmar y enviar la factura
+  const handleSignAndSend = async (file: File, password: string) => {
+    // Lógica para firmar y enviar la factura
+    if(invoiceData){
+      const data = await signInvoice(file, password, invoiceData._id);
+      console.log(data);
+    }else{
+      console.log('No se ha guardado la factura');
+    }
+  };
+
+  // Función para agregar un producto a la factura
   const addProducto = (product: Product) => {
     setFormData({
       ...formData,
@@ -166,10 +267,12 @@ const NewBilling: React.FC = () => {
             impuestos: {
               impuesto: {
                 codigo: 1,
-                codigoPorcentaje: 0,
+                codigoPorcentaje: 4,
                 tarifa: product.tax,
                 baseImponible: product.price,
-                valor: 0.0,
+                valor: parseFloat(
+                  (product.price * (product.tax / 100)).toFixed(2),
+                ),
               },
             },
           },
@@ -179,6 +282,7 @@ const NewBilling: React.FC = () => {
     setSearchTerm("");
   };
 
+  // Función para calcular el precio total de un producto
   const calculatePrice = (
     e: React.ChangeEvent<HTMLInputElement>,
     index: number,
@@ -209,6 +313,7 @@ const NewBilling: React.FC = () => {
     }
   };
 
+  // Función para agregar un método de pago a la factura
   const handleAddMetodoPago = (metodo: PagoType) => {
     formData.infoFactura.pagos.pago.push(metodo);
     setFormaPago({
@@ -220,8 +325,13 @@ const NewBilling: React.FC = () => {
     setShowModal(false);
   };
   return (
-    <form onSubmit={handleSubmit}>
-      {/* Sección del cliente */}
+    //Formulario de la factura
+    <div>
+      {/*Load Modal */}
+      <LoadModal show={loading} />
+      {/*Sign Modal */}
+      <SignedModal show={showSingModal} onClose={handleCloseSingModal} onSave={handleSignAndSend} />
+      {/* Sección de la empresa */}
       <div className="mb-4 max-w-md space-y-2">
         <Label className="mb-2 text-xl font-bold">Factura</Label>
         <div className="mb-2 block">
@@ -265,6 +375,7 @@ const NewBilling: React.FC = () => {
         </Select>
         {/* Add more fields as needed */}
       </div>
+      {/* Sección del cliente */}
       <div className="mb-4 space-y-6">
         <Label className="mb-2 text-xl font-bold">Adquiriente</Label>
         <div className="-mx-2 flex flex-wrap">
@@ -479,7 +590,7 @@ const NewBilling: React.FC = () => {
         </div>
       </div>
 
-      {/* Sección de totales */}
+      {/* Sección de totales, metodo de pago y campos adicionales*/}
       <div className="-mx-2 flex flex-wrap">
         {/* Columna izquierda: Métodos de pago e información adicional */}
         <div className="mb-4 w-full space-y-6 px-2 md:w-1/2">
@@ -627,7 +738,9 @@ const NewBilling: React.FC = () => {
                 </Table.Row>
                 <Table.Row className="py-1">
                   <Table.Cell className="py-1">Total descuento:</Table.Cell>
-                  <Table.Cell className="py-1">0.00</Table.Cell>
+                  <Table.Cell className="py-1">
+                    {formData.infoFactura.totalDescuento}
+                  </Table.Cell>
                 </Table.Row>
                 <Table.Row className="py-1">
                   <Table.Cell className="py-1">Valor ICE:</Table.Cell>
@@ -635,7 +748,12 @@ const NewBilling: React.FC = () => {
                 </Table.Row>
                 <Table.Row className="py-1">
                   <Table.Cell className="py-1">IVA 15.00% :</Table.Cell>
-                  <Table.Cell className="py-1">75.00</Table.Cell>
+                  <Table.Cell className="py-1">
+                    {
+                      formData.infoFactura.totalConImpuestos.totalImpuesto[0]
+                        .valor
+                    }
+                  </Table.Cell>
                 </Table.Row>
                 <Table.Row className="py-1">
                   <Table.Cell className="py-1">IVA 5% :</Table.Cell>
@@ -651,7 +769,9 @@ const NewBilling: React.FC = () => {
                 </Table.Row>
                 <Table.Row className="py-1">
                   <Table.Cell className="py-1">Valor a pagar:</Table.Cell>
-                  <Table.Cell className="py-1">575.00</Table.Cell>
+                  <Table.Cell className="py-1">
+                    {formData.infoFactura.importeTotal}
+                  </Table.Cell>
                 </Table.Row>
               </Table.Body>
             </Table>
@@ -659,8 +779,15 @@ const NewBilling: React.FC = () => {
         </div>
       </div>
 
-      <Button type="submit">Generar Factura</Button>
-    </form>
+      <div className="mb-4 flex space-x-2">
+        <Button type="button" onClick={handleSubmit}>
+          Guardar Factura
+        </Button>
+        <Button type="button" onClick={handleShowSingModal}>
+          Firmar y Enviar
+        </Button>
+      </div>
+    </div>
   );
 };
 

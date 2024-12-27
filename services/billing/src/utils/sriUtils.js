@@ -45,6 +45,11 @@ const cloneDeep = (obj) => {
 };
 
 // Función para leer un archivo .p12 y extraer el certificado y la clave privada
+// // Función para obtener el archivo .p12 desde el sistema de archivos local
+// async function getP12FromLocalFile(filePath) {
+//   return fs.promises.readFile(filePath);
+// }
+
 export const getP12FromLocalFile = async (path) => {
   const file = fs.readFileSync(path);
   const buffer = file.buffer.slice(
@@ -54,7 +59,8 @@ export const getP12FromLocalFile = async (path) => {
   return buffer;
 };
 
-//
+// Función auxiliar para SHA1 Base64
+
 const sha1Base64 = (text) => {
   const encoding = "utf8";
   let md = forge.md.sha1.create();
@@ -65,6 +71,12 @@ const sha1Base64 = (text) => {
   return base64;
 };
 
+// function sha1Base64(data) {
+//   const md = forge.md.sha1.create();
+//   md.update(data, "utf8");
+//   return forge.util.encode64(md.digest().getBytes());
+// }
+
 //
 function hexToBase64(hex) {
   hex = hex.padStart(hex.length + (hex.length % 2), "0");
@@ -72,7 +84,11 @@ function hexToBase64(hex) {
   return btoa(String.fromCharCode(...bytes));
 }
 
-//
+// Función para convertir un BigInteger en Base64
+// function bigIntToBase64(bigInt) {
+//   return forge.util.encode64(forge.util.hexToBytes(bigInt.toString(16)));
+// }
+
 function bigIntToBase64(bigInt) {
   const hex = bigInt.toString(16);
   const hexPairs = hex.match(/\w{2}/g);
@@ -88,7 +104,121 @@ function getRandomNumber(min = 990, max = 9999) {
   return Math.floor(Math.random() * (max - min + 1) + min);
 }
 
-//
+// Función para firmar XML
+// export async function signXML(p12FilePath, p12Password, xmlData) {
+//   // Cargar el archivo .p12
+
+//   const p12Buffer = fs.readFileSync(p12FilePath);
+//   const p12Asn1 = forge.asn1.fromDer(forge.util.binary.raw.encode(p12Buffer));
+//   const p12 = forge.pkcs12.pkcs12FromAsn1(p12Asn1, p12Password);
+
+//   // Obtener clave privada y certificado
+//   const keyBag = p12.getBags({ bagType: forge.pki.oids.pkcs8ShroudedKeyBag })[
+//     forge.pki.oids.pkcs8ShroudedKeyBag
+//   ][0];
+//   const certBag = p12.getBags({ bagType: forge.pki.oids.certBag })[
+//     forge.pki.oids.certBag
+//   ][0];
+//   const privateKey = keyBag.key;
+//   const certificate = certBag.cert;
+
+//   // Preparar el XML original (reemplazar saltos de línea innecesarios)
+//   let xml = xmlData.replace(/\s+/g, " ").trim();
+
+//   // Digest del contenido XML
+//   const xmlDigest = sha1Base64(xml);
+
+//   // Generar SignedProperties
+//   const signedProperties = `
+//     <etsi:SignedProperties xmlns:etsi="http://uri.etsi.org/01903/v1.3.2#" Id="SignedProperties">
+//       <etsi:SignedSignatureProperties>
+//         <etsi:SigningTime>${new Date().toISOString()}</etsi:SigningTime>
+//         <etsi:SigningCertificate>
+//           <etsi:Cert>
+//             <etsi:CertDigest>
+//               <ds:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1" />
+//               <ds:DigestValue>${sha1Base64(
+//                 forge.asn1
+//                   .toDer(forge.pki.certificateToAsn1(certificate))
+//                   .getBytes()
+//               )}</ds:DigestValue>
+//             </etsi:CertDigest>
+//             <etsi:IssuerSerial>
+//               <ds:X509IssuerName>${certificate.issuer.attributes
+//                 .map((attr) => `${attr.shortName}=${attr.value}`)
+//                 .join(", ")}</ds:X509IssuerName>
+//               <ds:X509SerialNumber>${parseInt(
+//                 certificate.serialNumber,
+//                 16
+//               )}</ds:X509SerialNumber>
+//             </etsi:IssuerSerial>
+//           </etsi:Cert>
+//         </etsi:SigningCertificate>
+//       </etsi:SignedSignatureProperties>
+//     </etsi:SignedProperties>`;
+
+//   const signedPropertiesDigest = sha1Base64(signedProperties);
+
+//   // Construir SignedInfo
+//   const signedInfo = `
+//     <ds:SignedInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
+//       <ds:CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315" />
+//       <ds:SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1" />
+//       <ds:Reference URI="">
+//         <ds:Transforms>
+//           <ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature" />
+//         </ds:Transforms>
+//         <ds:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1" />
+//         <ds:DigestValue>${xmlDigest}</ds:DigestValue>
+//       </ds:Reference>
+//       <ds:Reference URI="#SignedProperties">
+//         <ds:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1" />
+//         <ds:DigestValue>${signedPropertiesDigest}</ds:DigestValue>
+//       </ds:Reference>
+//     </ds:SignedInfo>`;
+
+//   // Firmar SignedInfo
+//   const canonicalSignedInfo = signedInfo.replace(/\s+/g, " ").trim();
+//   const md = forge.md.sha1.create();
+//   md.update(canonicalSignedInfo, "utf8");
+//   const signatureValue = forge.util.encode64(privateKey.sign(md));
+
+//   // Generar KeyInfo
+//   const modulus = bigIntToBase64(privateKey.n);
+//   const exponent = bigIntToBase64(privateKey.e);
+//   const keyInfo = `
+//     <ds:KeyInfo>
+//       <ds:X509Data>
+//         <ds:X509Certificate>${forge.pki
+//           .certificateToPem(certificate)
+//           .replace(/-----.*-----|\r?\n/g, "")}</ds:X509Certificate>
+//       </ds:X509Data>
+//       <ds:KeyValue>
+//         <ds:RSAKeyValue>
+//           <ds:Modulus>${modulus}</ds:Modulus>
+//           <ds:Exponent>${exponent}</ds:Exponent>
+//         </ds:RSAKeyValue>
+//       </ds:KeyValue>
+//     </ds:KeyInfo>`;
+
+//   // Construir ds:Signature
+//   const signature = `
+//     <ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
+//       ${signedInfo}
+//       <ds:SignatureValue>${signatureValue}</ds:SignatureValue>
+//       ${keyInfo}
+//       <ds:Object>
+//         ${signedProperties}
+//       </ds:Object>
+//     </ds:Signature>`;
+
+//   // Insertar la firma en el XML (asegúrate de que se inserte al final del documento, justo antes de la etiqueta de cierre)
+//   const signedXML = xml.replace(/(<\/[^<]+)$/, `${signature}$1`);
+
+//   return signedXML;
+// }
+
+
 export async function signXML(p12FilePath, p12Password, xmlData) {
   const arrayBuffer = await getP12FromLocalFile(p12FilePath);
 

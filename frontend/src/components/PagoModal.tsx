@@ -8,6 +8,7 @@ interface PagoModalProps {
   onSave: (pago: PagoType) => void;
   pago?: PagoType;
 }
+
 const PagoModal: React.FC<PagoModalProps> = ({ show, onClose, onSave, pago }) => {
     
     const [formaPago, setFormaPago] = useState<PagoType>({
